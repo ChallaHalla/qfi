@@ -17,6 +17,7 @@
 
 # misc
 .DS_Store
+/notes
 packages/.DS_Store
 .env.local
 .env.development.local

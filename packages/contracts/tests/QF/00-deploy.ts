@@ -114,7 +114,12 @@ describe("Quadratic Funding Infrastructure Deploy", () => {
       ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
       ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
     };
-    GrantRoundFactory = new GrantRoundFactory__factory({ ...linkedLibraryAddresses }, deployer);
+    GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
+      signer: deployer,
+      libraries: { ...linkedLibraryAddresses }
+    }
+    )
+    //GrantRoundFactory__factory({ ...linkedLibraryAddresses }, deployer);
     PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
     MessageAqFactoryFactory = new MessageAqFactory__factory({ ...linkedLibraryAddresses }, deployer);
     QFIFactory = new QFI__factory({ ...linkedLibraryAddresses }, deployer);
@@ -149,7 +154,7 @@ describe("Quadratic Funding Infrastructure Deploy", () => {
     await expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
   });
 
-  it("deploys PollFactory Contracts", async () => {
+  it("deploys PollFatory Contracts", async () => {
     pollFactory = await PollFactoryFactory.deploy();
     await expect((await pollFactory.deployTransaction.wait()).status).to.not.equal(0);
   });
