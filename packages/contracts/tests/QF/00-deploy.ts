@@ -154,7 +154,7 @@ describe("Quadratic Funding Infrastructure Deploy", () => {
     await expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
   });
 
-  it("deploys PollFatory Contracts", async () => {
+  it("deploys PollFactory Contracts", async () => {
     pollFactory = await PollFactoryFactory.deploy();
     await expect((await pollFactory.deployTransaction.wait()).status).to.not.equal(0);
   });
