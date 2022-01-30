@@ -1,19 +1,20 @@
 import { ethers } from 'hardhat';
+import { Signer } from "ethers";
 import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
-import "hardhat/console.sol";
 
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe('Grant Round Factory', () => {
-
+  let deployer: Signer;
+  let addr1: Signer;
   let grantRoundFactory: GrantRoundFactory;
 
   beforeEach(async () => {
-    const [deployer] = await ethers.getSigners();
+    [deployer] = await ethers.getSigners();
     const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
     const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer)
     const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
@@ -39,17 +40,20 @@ describe('Grant Round Factory', () => {
   })
 
   it('verify - initializes properly', async () => {
-
-    
+    await expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
   })
 
   it('verify - configured properly', async () => {
-  
+    //TODO not sure what to do here since contract has nothing in constructor?
   })
 
   describe('changing recipient registry', () => {
-    it('verify - allows owner to set recipient registry', async () => {
-      
+    it('verify - allows owner to set recipient registry', async () => { 
+      const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry")
+      const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+      grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
+      const rec = await grantRoundFactory.recipientRegistry()
+      expect(rec).to.equal(optimisticRecipientRegistry.address)
     })
 
     it('require fail - allows only owner to set recipient registry', async () => {
