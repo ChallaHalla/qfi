@@ -14,7 +14,7 @@ describe('Grant Round Factory', () => {
   let grantRoundFactory: GrantRoundFactory;
 
   beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
+    [deployer, addr1] = await ethers.getSigners();
     const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
     const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer)
     const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
@@ -50,17 +50,31 @@ describe('Grant Round Factory', () => {
   describe('changing recipient registry', () => {
     it('verify - allows owner to set recipient registry', async () => { 
       const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry")
-      const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
-      grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
-      const rec = await grantRoundFactory.recipientRegistry()
-      expect(rec).to.equal(optimisticRecipientRegistry.address)
+      const recipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+      grantRoundFactory.setRecipientRegistry(recipientRegistry.address);
+      const contractRecipientRegistry = await grantRoundFactory.recipientRegistry()
+      expect(contractRecipientRegistry).to.equal(recipientRegistry.address)
     })
 
     it('require fail - allows only owner to set recipient registry', async () => {
-      
+      const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry")
+      const recipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+      await expect(
+        grantRoundFactory.connect(addr1).setRecipientRegistry(recipientRegistry.address)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     })
 
-    it('varify - allows owner to change recipient registry', async () => {
+    it('verify - allows owner to change recipient registry', async () => {
+      const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry")
+      let recipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+      grantRoundFactory.setRecipientRegistry(recipientRegistry.address);
+      let contractRecipientRegistry = await grantRoundFactory.recipientRegistry()
+      expect(contractRecipientRegistry).to.equal(recipientRegistry.address)
+
+      recipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await addr1.getAddress());
+      grantRoundFactory.setRecipientRegistry(recipientRegistry.address);
+      contractRecipientRegistry = await grantRoundFactory.recipientRegistry()
+      expect(contractRecipientRegistry).to.equal(recipientRegistry.address)
     })
   })
 
