@@ -40,7 +40,7 @@ describe('Grant Round Factory', () => {
   })
 
   it('verify - initializes properly', async () => {
-    await expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
+    expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
   })
 
   it('verify - configured properly', async () => {
@@ -59,7 +59,7 @@ describe('Grant Round Factory', () => {
     it('require fail - allows only owner to set recipient registry', async () => {
       const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry")
       const recipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
-      await expect(
+     expect(
         grantRoundFactory.connect(addr1).setRecipientRegistry(recipientRegistry.address)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     })

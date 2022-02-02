@@ -7,9 +7,52 @@ const { expect } = chai;
 
 describe('Funding Round Factory', () => {
   
+  //let deployer: Signer;
+  //let coordinator: Signer;
+  //let grantRoundFactory: GrantRoundFactory;
+
+
   beforeEach(async () => {
-    
-  })
+    //[deployer, coordinator] = await ethers.getSigners();
+    //const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
+    //const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer)
+    //const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
+    //const PoseidonT6Factory = await ethers.getContractFactory("PoseidonT6", deployer)
+
+    //const poseidonT3 = await PoseidonT3Factory.deploy();
+    //const poseidonT4 = await PoseidonT4Factory.deploy();
+    //const poseidonT5 = await PoseidonT5Factory.deploy();
+    //const poseidonT6 = await PoseidonT6Factory.deploy();
+    //let baseERC20Token = await ethers.getContractFactory("BaseERC20Token", deployer)
+    //baseERC20Token.deploy(100);
+
+
+    //const linkedLibraryAddresses = {
+    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
+    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
+    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
+    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
+    //}
+    //const GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
+    //  signer: deployer,
+    //  libraries: { ...linkedLibraryAddresses }
+    //})
+    //grantRoundFactory = await GrantRoundFactory.deploy();
+    //const grantRound = grantRoundFactory.deployGrantRound(
+    //        1,
+    //        await coordinator.getAddress(),
+    //        baseERC20Token,
+    //        100,
+    //        _maxValues,
+    //        _treeDepths,
+    //        batchSizes,
+    //        _coordinatorPubKey,
+    //        vkRegistry,
+    //        this,
+    //        owner()
+    //    );
+    }
+  )
 
   it('initializes', async () => {
     
