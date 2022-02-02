@@ -7,18 +7,16 @@ import { FundsManager } from "../typechain/FundsManager";
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Grant Round Factory', () => {
+describe('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
   let addr2: Signer;
   let fundsManager: FundsManager;
 
-
-
   beforeEach(async () => {
     [deployer, addr1, addr2] = await ethers.getSigners();
-    const FundsManagerFactory = await ethers.getContractFactory("FundsManager")
+    const FundsManagerFactory = await ethers.getContractFactory("FundsManager", deployer)
     fundsManager = await FundsManagerFactory.deploy();
   })
 
@@ -39,8 +37,9 @@ describe('Grant Round Factory', () => {
     })
 
     it('require fail - allows only owner to add funding source', async () => {
-      expect(fundsManager.connect(addr1).addFundingSource(await addr2.getAddress())).
-      to.be.revertedWith("Ownable: caller is not the owner")
+      expect(
+        fundsManager.connect(addr1).addFundingSource(await addr2.getAddress())
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     })
 
     it('require fail - reverts if funding source is already added', async () => {
