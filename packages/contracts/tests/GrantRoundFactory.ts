@@ -40,11 +40,14 @@ describe('Grant Round Factory', () => {
   })
 
   it('verify - initializes properly', async () => {
-    expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
+    const deployTransaction = await grantRoundFactory.deployTransaction.wait()
+    expect(deployTransaction.status).to.not.equal(0);
+    expect(deployTransaction.contractAddress).to.equal(grantRoundFactory.address);
   })
 
   it('verify - configured properly', async () => {
-    //TODO not sure what to do here since contract has nothing in constructor?
+    expect(await grantRoundFactory.messageAqFactory()).to.not.equal(null)
+    expect(await grantRoundFactory.recipientRegistry()).to.not.equal(null)
   })
 
   describe('changing recipient registry', () => {

@@ -14,6 +14,8 @@ describe('Funds manager', () => {
   let addr2: Signer;
   let fundsManager: FundsManager;
 
+  //let fundsManagerAddress = something
+
   beforeEach(async () => {
     [deployer, addr1, addr2] = await ethers.getSigners();
     const FundsManagerFactory = await ethers.getContractFactory("FundsManager", deployer)
@@ -22,10 +24,17 @@ describe('Funds manager', () => {
 
   it('verify - initializes properly', async () => {
     expect((await fundsManager.deployTransaction.wait()).status).to.not.equal(0);
+    fundsManager.address
+
   })
 
   it('verify - configured properly', async () => {
-    //TODO not sure what to check here since no constructor
+    //To test
+    //public vars
+    //constructor
+    //get_byte_code @ fundsManager.address
+    //
+    //check that fundsManager = await ethers.getContract(contract_address)
   })
 
   describe('managing funding sources', () => {
@@ -48,6 +57,7 @@ describe('Funds manager', () => {
       to.be.revertedWith("Factory: Funding source already added")
     })
 
+    // Test calling methods with bad inputs as well
     it('verify - allows owner to remove funding source', async () => {
       fundsManager.addFundingSource(await addr1.getAddress())
       fundsManager.removeFundingSource(await addr1.getAddress())
