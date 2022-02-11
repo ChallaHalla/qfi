@@ -1,25 +1,31 @@
-import { ethers } from 'hardhat';
+import { ethers, waffle} from 'hardhat';
+import { BaseERC20Token } from "../typechain/BaseERC20Token";
 import { Signer } from "ethers";
 import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { FundsManager } from "../typechain/FundsManager";
+import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
+import { BaseERC20Token__factory } from "../typechain/factories/BaseERC20Token__factory";
 
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Funds manager', () => {
+describe.only('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
   let addr2: Signer;
   let fundsManager: FundsManager;
-
-  //let fundsManagerAddress = something
+  let baseERC20Token: BaseERC20Token;
+  let BaseERC20TokenFactory : BaseERC20Token__factory
 
   beforeEach(async () => {
     [deployer, addr1, addr2] = await ethers.getSigners();
     const FundsManagerFactory = await ethers.getContractFactory("FundsManager", deployer)
     fundsManager = await FundsManagerFactory.deploy();
+
+    BaseERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
+
   })
 
   it('verify - initializes properly', async () => {
@@ -29,20 +35,15 @@ describe('Funds manager', () => {
   })
 
   it('verify - configured properly', async () => {
-    //To test
-    //public vars
-    //constructor
-    //get_byte_code @ fundsManager.address
-    //
-    //check that fundsManager = await ethers.getContract(contract_address)
+    const provider = waffle.provider;
+    expect(await provider.getCode(fundsManager.address)).to.not.equal("0x")
+    const contract = await ethers.getContractAt("FundsManager", fundsManager.address)
   })
 
   describe('managing funding sources', () => {
     it('verify - allows owner to add funding source', async () => {
-      //TODO not sure if I can check the funding sources here 
-      //since it is private in the contract
-      fundsManager.addFundingSource(await addr1.getAddress())
-      expect(true)
+      const tx = await fundsManager.addFundingSource(await addr1.getAddress())
+      expect((await tx.wait()).status).to.not.equal(0)
     })
 
     it('require fail - allows only owner to add funding source', async () => {
@@ -79,21 +80,11 @@ describe('Funds manager', () => {
   })
 
   it('allows direct contributions to the matching pool', async () => {
-    //TODO I'm assuming matching pool means contract's balance
-    ////
-    //const provider = ethers.getDefaultProvider('hardhat')
-    //const initialBalance = await provider.getBalance(fundsManager.address);
-
-    //const contribution = ethers.utils.parseEther("1") 
-
-    //addr1.sendTransaction({
-    //  to: fundsManager.address,
-    //  value: contribution
-    //})
-    //const newBalance = await provider.getBalance(fundsManager.address);
-
-    ////Not sure why this doesnt work
-    //expect(newBalance).to.be(initialBalance + contribution)
+    //NOTE I'm assuming matching pool means contract's balance
+    const baseERC20Token = await BaseERC20TokenFactory.deploy(100);
+    await baseERC20Token.transfer(await addr1.getAddress(), 50);
+    await baseERC20Token.connect(addr1).transfer(fundsManager.address, 50);
+    expect(await baseERC20Token.balanceOf(fundsManager.address)).to.equal(50)
 
   })
 
