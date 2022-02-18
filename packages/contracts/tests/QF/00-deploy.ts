@@ -119,7 +119,6 @@ describe("Quadratic Funding Infrastructure Deploy", () => {
       libraries: { ...linkedLibraryAddresses }
     }
     )
-    //GrantRoundFactory__factory({ ...linkedLibraryAddresses }, deployer);
     PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
     MessageAqFactoryFactory = new MessageAqFactory__factory({ ...linkedLibraryAddresses }, deployer);
     QFIFactory = new QFI__factory({ ...linkedLibraryAddresses }, deployer);
@@ -150,6 +149,7 @@ describe("Quadratic Funding Infrastructure Deploy", () => {
 
 
   it("deploys GrantRoundFactory Contracts", async () => {
+    //GrantRoundFactory__factory({ ...linkedLibraryAddresses }, deployer);
     grantRoundFactory = await GrantRoundFactory.deploy();
     await expect((await grantRoundFactory.deployTransaction.wait()).status).to.not.equal(0);
   });
