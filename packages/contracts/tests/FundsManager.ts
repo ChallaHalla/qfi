@@ -5,7 +5,17 @@ import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { FundsManager } from "../typechain/FundsManager";
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
-import { BaseERC20Token__factory } from "../typechain/factories/BaseERC20Token__factory";
+import deployGrantRound from "./helpers/DeployGrantRound";
+import { PoseidonT3 } from "../typechain/PoseidonT3";
+import { PoseidonT3__factory } from "../typechain/factories/PoseidonT3__factory";
+import { PoseidonT4 } from "../typechain/PoseidonT4";
+import { PoseidonT4__factory } from "../typechain/factories/PoseidonT4__factory";
+import { PoseidonT5 } from "../typechain/PoseidonT5";
+import { PoseidonT5__factory } from "../typechain/factories/PoseidonT5__factory";
+import { PoseidonT6 } from "../typechain/PoseidonT6";
+import { PoseidonT6__factory } from "../typechain/factories/PoseidonT6__factory";
+
+
 
 chai.use(solidity);
 const { expect } = chai;
@@ -17,7 +27,6 @@ describe('Funds manager', () => {
   let addr2: Signer;
   let fundsManager: FundsManager;
   let token: BaseERC20Token;
-  let ERC20TokenFactory : BaseERC20Token__factory
 
   beforeEach(async () => {
     [deployer, addr1, addr2] = await ethers.getSigners();
@@ -25,9 +34,8 @@ describe('Funds manager', () => {
 
     fundsManager = await FundsManagerFactory.deploy();
 
-    ERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
-    token = await ERC20TokenFactory.deploy(100);
-
+    const BaseERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
+    token = await BaseERC20TokenFactory.deploy(50);
   })
 
   it('verify - initializes properly', async () => {
@@ -113,47 +121,71 @@ describe('Funds manager', () => {
 
 
   describe('transferring matching funds', () => {
-    //let grantRound
-    //let grantRoundFactory
+    beforeEach(async () => {
+      const coordinator = ethers.Wallet.createRandom()
+      const grantRoundFactory = await deployGrantRound(deployer)
+      const BaseERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
+      token = await BaseERC20TokenFactory.deploy(50); 
 
-    //ERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
-    //token = await ERC20TokenFactory.deploy(100);
+      const PoseidonT3Factory = new PoseidonT3__factory(deployer);
+      const PoseidonT4Factory = new PoseidonT4__factory(deployer);
+      const PoseidonT5Factory = new PoseidonT5__factory(deployer);
+      const PoseidonT6Factory = new PoseidonT6__factory(deployer);
+      const poseidonT3 = await PoseidonT3Factory.deploy();
+      const poseidonT4 = await PoseidonT4Factory.deploy();
+      const poseidonT5 = await PoseidonT5Factory.deploy();
+      const poseidonT6 = await PoseidonT6Factory.deploy();
 
-    //const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
-    //const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer) const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
-    //const PoseidonT6Factory = await ethers.getContractFactory("PoseidonT6", deployer)
+      const linkedLibraryAddresses = {
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
+    };
 
-    //const poseidonT3 = await PoseidonT3Factory.deploy();
-    //const poseidonT4 = await PoseidonT4Factory.deploy();
-    //const poseidonT5 = await PoseidonT5Factory.deploy();
-    //const poseidonT6 = await PoseidonT6Factory.deploy();
 
-    //const linkedLibraryAddresses = {
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
-    //}
-    //const GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
-    //  signer: deployer,
-    //  libraries: { ...linkedLibraryAddresses }
-    //})
-    //grantRoundFactory = await GrantRoundFactory.deploy();
-    //grantRound = grantRoundFactory.deployGrantRound(
-    //        1,
-    //        await addr1.getAddress(),
-    //        token,
-    //        100,
-    //        _maxValues,
-    //        _treeDepths,
-    //        batchSizes,
-    //        _coordinatorPubKey,
-    //        vkRegistry,
-    //        this,
-    //        owner()
-    //    );
+      const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry", deployer)
+
+      const PollFactoryFactory = await ethers.getContractFactory("PollFactory", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+
+    const FreeForAllGateKeeperFactory = await ethers.getContractFactory("FreeForAllGatekeeper", deployer);
+    const ConstantInitialVoiceCreditProxyFactory = await ethers.getContractFactory("ConstantInitialVoiceCreditProxy", deployer);
+
+      const MACIFactory = await ethers.getContractFactory("MACI", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+
+
+    const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+    const pollFactory = await PollFactoryFactory.deploy();
+    const freeForAllGateKeeper = await FreeForAllGateKeeperFactory.deploy();
+    const constantInitialVoiceCreditProxy = await ConstantInitialVoiceCreditProxyFactory.deploy(0);
+
+    const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
+    const VKRegistry = await VKRegistryFactory.deploy()
+    console.log(VKRegistry)
+
+
+    const maci = await MACIFactory.deploy(
+      pollFactory.address,
+      freeForAllGateKeeper.address,
+      constantInitialVoiceCreditProxy.address
+    );
+      const grantRound = grantRoundFactory.deployGrantRound(
+            1,
+            coordinator.address,
+            token.address,
+            100,
+            {maxMessages: 1, maxVoteOptions: 1},
+            {intStateTreeDepth: 1, messageTreeSubDepth: 1, messageTreeDepth: 1, voteOptionTreeDepth: 1},
+            {messageBatchSize: 1, tallyBatchSize: 1},
+            //HOW TO structure a public key?
+            {  x: 1, y: 1 },
+            VKRegistry.address,
+            maci.address,
+            grantRoundFactory.address
+        );
+
+    })
     
-
     it('returns the amount of available matching funding', async () => {
       
     })
