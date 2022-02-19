@@ -1,5 +1,7 @@
 import { ethers } from "hardhat";
 import { BigNumber, Signer } from "ethers";
+import chai from 'chai';
+import { solidity } from 'ethereum-waffle';
 import { OptimisticRecipientRegistry__factory } from "../typechain/factories/OptimisticRecipientRegistry__factory";
 import { BaseERC20Token__factory } from "../typechain/factories/BaseERC20Token__factory";
 import { BaseERC20Token } from "../typechain/BaseERC20Token";
@@ -13,13 +15,14 @@ import { PoseidonT5 } from "../typechain/PoseidonT5";
 import { PoseidonT5__factory } from "../typechain/factories/PoseidonT5__factory";
 import { PoseidonT6 } from "../typechain/PoseidonT6";
 import { PoseidonT6__factory } from "../typechain/factories/PoseidonT6__factory";
-
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
-
 import { PollFactory__factory, PollFactoryLibraryAddresses } from "../typechain/factories/PollFactory__factory";
-
 import { FreeForAllGatekeeper__factory } from "../typechain/factories/FreeForAllGatekeeper__factory";
 import { ConstantInitialVoiceCreditProxy__factory } from "../typechain/factories/ConstantInitialVoiceCreditProxy__factory";
+
+chai.use(solidity);
+const { expect } = chai;
+
 
 describe.only('QFI', () => {
   
@@ -56,7 +59,7 @@ describe.only('QFI', () => {
     BaseERC20TokenFactory = new BaseERC20Token__factory(deployer);
     baseERC20Token = await BaseERC20TokenFactory.deploy(100);
     RecipientRegistryFactory = new OptimisticRecipientRegistry__factory(deployer);
- const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+    const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
     const grantRoundFactory = await GrantRoundFactory.deploy();
     grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
     const PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
@@ -78,15 +81,24 @@ describe.only('QFI', () => {
   })
 
   it('initializes', async () => {
-    
+    const deployTransaction = await qfi.deployTransaction.wait()
+    expect(deployTransaction.status).to.not.equal(0);
+    expect(deployTransaction.contractAddress).to.equal(qfi.address);
   })
 
   it('configured', async () => {
-  
+    expect(await qfi.grantRoundFactory()).to.not.equal(ethers.constants.AddressZero)
+    expect(await qfi.currentStage()).to.equal(0);
+    expect(await qfi.nativeToken()).to.not.equal(ethers.constants.AddressZero)
+    expect(await qfi.voiceCreditFactor()).to.equal(10000000000000)
   })
 
   describe('changing signup gatekeeper', () => {
     it('allows owner to set signup gatekeeper', async () => {
+      // signup gate keeper is only set during deploy?
+      // so won't owner always be setting?
+      // not sure how to test
+
     })
 
     it('allows only owner to set signup gatekeeper', async () => {
@@ -116,6 +128,7 @@ describe.only('QFI', () => {
     })
 
     it('require fail - reverts if coordinator is not set', async () => {
+      //Not sure how to do this because requires pub key struct
       
     })
 
