@@ -230,39 +230,39 @@ contract QFI is MACI, FundsManager {
             currentStage == Stage.WAITING_FOR_SIGNUPS_AND_TOPUPS,
             "MACI: Cannot deploy a new grant round while not in the WAITING_FOR_SIGNUPS_AND_TOPUPS stage"
         );
-        uint256 pollId = nextPollId;
-        uint256 grantRoundId = nextGrantRoundId;
+        //uint256 pollId = nextPollId;
+        //uint256 grantRoundId = nextGrantRoundId;
 
-        // The message batch size and the tally batch size
-        BatchSizes memory batchSizes = BatchSizes(
-            MESSAGE_TREE_ARITY**uint8(_treeDepths.messageTreeSubDepth),
-            STATE_TREE_ARITY**uint8(_treeDepths.intStateTreeDepth)
-        );
+        //// The message batch size and the tally batch size
+        //BatchSizes memory batchSizes = BatchSizes(
+        //    MESSAGE_TREE_ARITY**uint8(_treeDepths.messageTreeSubDepth),
+        //    STATE_TREE_ARITY**uint8(_treeDepths.intStateTreeDepth)
+        //);
 
-        GrantRound g = grantRoundFactory.deployGrantRound(
-            voiceCreditFactor,
-            coordinator,
-            nativeToken,
-            _duration,
-            _maxValues,
-            _treeDepths,
-            batchSizes,
-            _coordinatorPubKey,
-            vkRegistry,
-            this,
-            owner()
-        );
+        //GrantRound g = grantRoundFactory.deployGrantRound(
+        //    voiceCreditFactor,
+        //    coordinator,
+        //    nativeToken,
+        //    _duration,
+        //    _maxValues,
+        //    _treeDepths,
+        //    batchSizes,
+        //    _coordinatorPubKey,
+        //    vkRegistry,
+        //    this,
+        //    owner()
+        //);
 
-        currentGrantRound = g;
-        polls[pollId] = g;
-        grantRounds[grantRoundId] = g;
-        // Increment the grantRound ID for the next poll
-        nextGrantRoundId++;
-        // Increment the poll ID for the next poll
-        nextPollId++;
+        //currentGrantRound = g;
+        //polls[pollId] = g;
+        //grantRounds[grantRoundId] = g;
+        //// Increment the grantRound ID for the next poll
+        //nextGrantRoundId++;
+        //// Increment the poll ID for the next poll
+        //nextPollId++;
 
-        currentStage = Stage.VOTING_PERIOD_OPEN;
-        emit DeployPoll(pollId, address(g), _coordinatorPubKey);
+        //currentStage = Stage.VOTING_PERIOD_OPEN;
+        //emit DeployPoll(pollId, address(g), _coordinatorPubKey);
         // emit deployGrantRound( grantRoundId, _duration, _maxValues, _treeDepths, _coordinatorPubKey);
     }
 

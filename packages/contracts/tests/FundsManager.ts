@@ -98,7 +98,6 @@ describe('Funds manager', () => {
   })
 
   //describe('withdrawing funds', () => {
-  //  //TODO doesnt look like contract does this?
   //  //Seems like QFI contract handles withdrawls
   //
   //  it('allows contributors to withdraw funds', async () => {
@@ -178,6 +177,7 @@ describe('Funds manager', () => {
             {intStateTreeDepth: 1, messageTreeSubDepth: 1, messageTreeDepth: 1, voteOptionTreeDepth: 1},
             {messageBatchSize: 1, tallyBatchSize: 1},
             //HOW TO structure a public key?
+            //NOTE look at qfi test now
             {  x: 1, y: 1 },
             VKRegistry.address,
             maci.address,

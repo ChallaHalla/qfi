@@ -19,6 +19,7 @@ import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
 import { PollFactory__factory, PollFactoryLibraryAddresses } from "../typechain/factories/PollFactory__factory";
 import { FreeForAllGatekeeper__factory } from "../typechain/factories/FreeForAllGatekeeper__factory";
 import { ConstantInitialVoiceCreditProxy__factory } from "../typechain/factories/ConstantInitialVoiceCreditProxy__factory";
+import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -31,6 +32,10 @@ describe.only('QFI', () => {
   let BaseERC20TokenFactory: BaseERC20Token__factory;
   let baseERC20Token: BaseERC20Token;
   let qfi: QFI;
+  let MessageAqFactoryFactory: any
+  let pollFactory: any
+  let grantRoundFactory: any
+
 
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
@@ -55,15 +60,24 @@ describe.only('QFI', () => {
       libraries: { ...linkedLibraryAddresses }
     }
     )
+     MessageAqFactoryFactory = await ethers.getContractFactory( "MessageAqFactory", {
+      signer: deployer,
+      libraries: { ...linkedLibraryAddresses }
+    }
+    )
+
 
     BaseERC20TokenFactory = new BaseERC20Token__factory(deployer);
     baseERC20Token = await BaseERC20TokenFactory.deploy(100);
     RecipientRegistryFactory = new OptimisticRecipientRegistry__factory(deployer);
     const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
-    const grantRoundFactory = await GrantRoundFactory.deploy();
+    grantRoundFactory = await GrantRoundFactory.deploy();
     grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
+
+
     const PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
-    const pollFactory = await PollFactoryFactory.deploy();
+    pollFactory = await PollFactoryFactory.deploy();
+
     const FreeForAllGateKeeperFactory = new FreeForAllGatekeeper__factory(deployer);
     const freeForAllGateKeeper = await FreeForAllGateKeeperFactory.deploy();
     const ConstantInitialVoiceCreditProxyFactory = new ConstantInitialVoiceCreditProxy__factory(deployer);
@@ -71,19 +85,34 @@ describe.only('QFI', () => {
 
     const QFIFactory = new QFI__factory({ ...linkedLibraryAddresses }, deployer);
 
+
     qfi = await QFIFactory.deploy(
       baseERC20Token.address,
       grantRoundFactory.address,
       pollFactory.address,
       freeForAllGateKeeper.address,
       constantInitialVoiceCreditProxy.address
-    )   
+    )
+    pollFactory.transferOwnership(qfi.address)
+    grantRoundFactory.transferOwnership(qfi.address)
   })
 
   it('initializes', async () => {
+    
     const deployTransaction = await qfi.deployTransaction.wait()
     expect(deployTransaction.status).to.not.equal(0);
     expect(deployTransaction.contractAddress).to.equal(qfi.address);
+    expect(await qfi.owner()).to.equal(await deployer.getAddress());
+
+    const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
+    const VKRegistry = await VKRegistryFactory.deploy()
+
+    const messageAqFactory = await MessageAqFactoryFactory.deploy();
+    const messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
+
+    await messageAqFactory.transferOwnership(pollFactory.address)
+    await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
+    qfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
   })
 
   it('configured', async () => {
@@ -93,29 +122,51 @@ describe.only('QFI', () => {
     expect(await qfi.voiceCreditFactor()).to.equal(10000000000000)
   })
 
-  describe('changing signup gatekeeper', () => {
-    it('allows owner to set signup gatekeeper', async () => {
-      // signup gate keeper is only set during deploy?
-      // so won't owner always be setting?
-      // not sure how to test
+  //describe('changing signup gatekeeper', () => {
+  //  TODO confirm if this test is needed
+  //  it('allows owner to set signup gatekeeper', async () => {
+  //    // signup gate keeper is only set during deploy?
+  //    // so won't owner always be setting?
+  //    // not sure how to test
 
-    })
+  //  })
 
-    it('allows only owner to set signup gatekeeper', async () => {
-    })
+  //  it('allows only owner to set signup gatekeeper', async () => {
+  //  })
 
-    it('allows owner to change signup gatekeeper', async () => {
-    })
-  })
-
-  
+  //  it('allows owner to change signup gatekeeper', async () => {
+  //  })
+  //})
 
   describe('deploying funding round', () => {
+    beforeEach(async () => {
+      const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
+      const VKRegistry = await VKRegistryFactory.deploy()
+
+      const messageAqFactory = await MessageAqFactoryFactory.deploy();
+      const messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
+
+      await messageAqFactory.transferOwnership(pollFactory.address)
+      await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
+      await qfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
+    })
+
     it('deploys funding round', async () => {
-      
+      const coordinator = ethers.Wallet.createRandom()
+      const coordinatorKey = new Keypair()
+      const tx = await qfi.deployGrantRound(
+        10,
+        {maxMessages: 2, maxVoteOptions: 2},
+        {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+        coordinatorKey.pubKey.asContractParam(),
+        coordinator.address,
+      )
+      console.log(tx)
     })
 
     it('require fail - reverts if signup gatekeeper is not set', async () => {
+      // set atekeeper to address that points to nothing
+      // make sure transaction reverts
       
     })
 
