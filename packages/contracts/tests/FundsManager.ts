@@ -14,13 +14,13 @@ import { PoseidonT5 } from "../typechain/PoseidonT5";
 import { PoseidonT5__factory } from "../typechain/factories/PoseidonT5__factory";
 import { PoseidonT6 } from "../typechain/PoseidonT6";
 import { PoseidonT6__factory } from "../typechain/factories/PoseidonT6__factory";
-
+import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 
 
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Funds manager', () => {
+describe.only('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
@@ -143,14 +143,13 @@ describe('Funds manager', () => {
     };
 
 
-      const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry", deployer)
-
-      const PollFactoryFactory = await ethers.getContractFactory("PollFactory", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+    const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry", deployer)
+    const PollFactoryFactory = await ethers.getContractFactory("PollFactory", {signer: deployer, libraries: {...linkedLibraryAddresses}})
 
     const FreeForAllGateKeeperFactory = await ethers.getContractFactory("FreeForAllGatekeeper", deployer);
     const ConstantInitialVoiceCreditProxyFactory = await ethers.getContractFactory("ConstantInitialVoiceCreditProxy", deployer);
 
-      const MACIFactory = await ethers.getContractFactory("MACI", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+    const MACIFactory = await ethers.getContractFactory("MACI", {signer: deployer, libraries: {...linkedLibraryAddresses}})
 
 
     const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
@@ -160,34 +159,40 @@ describe('Funds manager', () => {
 
     const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
     const VKRegistry = await VKRegistryFactory.deploy()
-    console.log(VKRegistry)
-
 
     const maci = await MACIFactory.deploy(
       pollFactory.address,
       freeForAllGateKeeper.address,
       constantInitialVoiceCreditProxy.address
     );
-      const grantRound = grantRoundFactory.deployGrantRound(
-            1,
-            coordinator.address,
-            token.address,
-            100,
-            {maxMessages: 1, maxVoteOptions: 1},
-            {intStateTreeDepth: 1, messageTreeSubDepth: 1, messageTreeDepth: 1, voteOptionTreeDepth: 1},
-            {messageBatchSize: 1, tallyBatchSize: 1},
-            //HOW TO structure a public key?
-            //NOTE look at qfi test now
-            {  x: 1, y: 1 },
-            VKRegistry.address,
-            maci.address,
-            grantRoundFactory.address
-        );
+    const MessageAqFactoryFactory = await ethers.getContractFactory( "MessageAqFactory", {
+      signer: deployer,
+      libraries: { ...linkedLibraryAddresses }
+    }
+    )
 
+    const messageAqFactory = await MessageAqFactoryFactory.deploy();
+    messageAqFactory.transferOwnership(grantRoundFactory.address)
+    grantRoundFactory.setMessageAqFactory(messageAqFactory.address)
+
+    const coordinatorKey = new Keypair()
+    const grantRound = grantRoundFactory.deployGrantRound(
+      1,
+      coordinator.address,
+      token.address,
+      100,
+      {maxMessages: 5, maxVoteOptions: 5},
+      {intStateTreeDepth: 1, messageTreeSubDepth: 1, messageTreeDepth: 1, voteOptionTreeDepth: 1},
+      {messageBatchSize: 1, tallyBatchSize: 1},
+      coordinatorKey.pubKey.asContractParam(),
+      VKRegistry.address,
+      maci.address,
+      grantRoundFactory.address
+    );
     })
     
     it('returns the amount of available matching funding', async () => {
-      
+     console.log(await fundsManager.getMatchingFunds(token.address) )
     })
 
     it('pulls funds from funding source', async () => {

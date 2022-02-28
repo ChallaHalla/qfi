@@ -111,7 +111,6 @@ contract GrantRoundFactory is
                 _maxValues.maxVoteOptions < (2**50),
             "PollFactory: invalid _maxValues"
         );
-
         AccQueue messageAq = messageAqFactory.deploy(
             _treeDepths.messageTreeSubDepth
         );
@@ -136,7 +135,8 @@ contract GrantRoundFactory is
             recipientRegistry
         );
 
-        // Make the Poll contract own the messageAq contract, so only it can
+
+        // Make the Poll contract own the essageAq contract, so only it can
         // run enqueue/merge
         messageAq.transferOwnership(address(grantRound));
 

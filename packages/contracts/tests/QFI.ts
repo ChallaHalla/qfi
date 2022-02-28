@@ -25,7 +25,7 @@ chai.use(solidity);
 const { expect } = chai;
 
 
-describe.only('QFI', () => {
+describe('QFI', () => {
   
   let deployer: Signer;
   let RecipientRegistryFactory: OptimisticRecipientRegistry__factory;
@@ -35,6 +35,18 @@ describe.only('QFI', () => {
   let MessageAqFactoryFactory: any
   let pollFactory: any
   let grantRoundFactory: any
+  let optimisticRecipientRegistry: any
+  let PollFactoryFactory: any
+  let FreeForAllGateKeeperFactory: any
+  let freeForAllGateKeeper: any
+  let ConstantInitialVoiceCreditProxyFactory: any
+  let constantInitialVoiceCreditProxy: any
+  let QFIFactory: any
+  let VKRegistryFactory: any
+  let VKRegistry: any
+  let messageAqFactory : any
+  let messageAqFactoryGrants: any
+  let GrantRoundFactory: any
 
 
   beforeEach(async () => {
@@ -55,7 +67,7 @@ describe.only('QFI', () => {
       ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
     };
 
-    const GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
+    GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
       signer: deployer,
       libraries: { ...linkedLibraryAddresses }
     }
@@ -70,20 +82,20 @@ describe.only('QFI', () => {
     BaseERC20TokenFactory = new BaseERC20Token__factory(deployer);
     baseERC20Token = await BaseERC20TokenFactory.deploy(100);
     RecipientRegistryFactory = new OptimisticRecipientRegistry__factory(deployer);
-    const optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+    optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
     grantRoundFactory = await GrantRoundFactory.deploy();
     grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
 
 
-    const PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
+    PollFactoryFactory = new PollFactory__factory({ ...linkedLibraryAddresses }, deployer);
     pollFactory = await PollFactoryFactory.deploy();
 
-    const FreeForAllGateKeeperFactory = new FreeForAllGatekeeper__factory(deployer);
-    const freeForAllGateKeeper = await FreeForAllGateKeeperFactory.deploy();
-    const ConstantInitialVoiceCreditProxyFactory = new ConstantInitialVoiceCreditProxy__factory(deployer);
-    const constantInitialVoiceCreditProxy = await ConstantInitialVoiceCreditProxyFactory.deploy(0);
+     FreeForAllGateKeeperFactory = new FreeForAllGatekeeper__factory(deployer);
+     freeForAllGateKeeper = await FreeForAllGateKeeperFactory.deploy();
+     ConstantInitialVoiceCreditProxyFactory = new ConstantInitialVoiceCreditProxy__factory(deployer);
+     constantInitialVoiceCreditProxy = await ConstantInitialVoiceCreditProxyFactory.deploy(0);
 
-    const QFIFactory = new QFI__factory({ ...linkedLibraryAddresses }, deployer);
+    QFIFactory = new QFI__factory({ ...linkedLibraryAddresses }, deployer);
 
 
     qfi = await QFIFactory.deploy(
@@ -93,31 +105,29 @@ describe.only('QFI', () => {
       freeForAllGateKeeper.address,
       constantInitialVoiceCreditProxy.address
     )
-    pollFactory.transferOwnership(qfi.address)
-    grantRoundFactory.transferOwnership(qfi.address)
+    VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
+    VKRegistry = await VKRegistryFactory.deploy()
+
+    messageAqFactory = await MessageAqFactoryFactory.deploy();
+    messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
+
+    await messageAqFactory.transferOwnership(pollFactory.address)
+    await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
+    await pollFactory.transferOwnership(qfi.address)
+    await grantRoundFactory.transferOwnership(qfi.address)
+    await qfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
   })
 
   it('initializes', async () => {
-    
     const deployTransaction = await qfi.deployTransaction.wait()
     expect(deployTransaction.status).to.not.equal(0);
     expect(deployTransaction.contractAddress).to.equal(qfi.address);
     expect(await qfi.owner()).to.equal(await deployer.getAddress());
-
-    const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
-    const VKRegistry = await VKRegistryFactory.deploy()
-
-    const messageAqFactory = await MessageAqFactoryFactory.deploy();
-    const messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
-
-    await messageAqFactory.transferOwnership(pollFactory.address)
-    await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
-    qfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
   })
 
   it('configured', async () => {
     expect(await qfi.grantRoundFactory()).to.not.equal(ethers.constants.AddressZero)
-    expect(await qfi.currentStage()).to.equal(0);
+    expect(await qfi.currentStage()).to.equal(1);
     expect(await qfi.nativeToken()).to.not.equal(ethers.constants.AddressZero)
     expect(await qfi.voiceCreditFactor()).to.equal(10000000000000)
   })
@@ -139,35 +149,59 @@ describe.only('QFI', () => {
   //})
 
   describe('deploying funding round', () => {
-    beforeEach(async () => {
-      const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
-      const VKRegistry = await VKRegistryFactory.deploy()
-
-      const messageAqFactory = await MessageAqFactoryFactory.deploy();
-      const messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
-
-      await messageAqFactory.transferOwnership(pollFactory.address)
-      await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
-      await qfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
-    })
 
     it('deploys funding round', async () => {
       const coordinator = ethers.Wallet.createRandom()
       const coordinatorKey = new Keypair()
       const tx = await qfi.deployGrantRound(
         10,
-        {maxMessages: 2, maxVoteOptions: 2},
+        {maxMessages: 5, maxVoteOptions: 5},
         {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
         coordinatorKey.pubKey.asContractParam(),
         coordinator.address,
       )
-      console.log(tx)
     })
 
     it('require fail - reverts if signup gatekeeper is not set', async () => {
-      // set atekeeper to address that points to nothing
+      // set gatekeeper to address that points to nothing
       // make sure transaction reverts
-      
+      //
+      // TODO it doesn't seem like there is logic
+      // that will make this revert right now in 
+      // deployGrantRound methods
+      pollFactory = await PollFactoryFactory.deploy();
+      optimisticRecipientRegistry = await RecipientRegistryFactory.deploy(0, 0, await deployer.getAddress());
+      grantRoundFactory = await GrantRoundFactory.deploy();
+      grantRoundFactory.setRecipientRegistry(optimisticRecipientRegistry.address);
+
+
+      const missingGatekeepterQfi = await QFIFactory.deploy(
+        baseERC20Token.address,
+        grantRoundFactory.address,
+        pollFactory.address,
+        ethers.constants.AddressZero,
+        constantInitialVoiceCreditProxy.address
+      )
+      console.log(missingGatekeepterQfi)
+
+      messageAqFactory = await MessageAqFactoryFactory.deploy();
+      messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
+
+      await messageAqFactory.transferOwnership(pollFactory.address)
+      await messageAqFactoryGrants.transferOwnership(grantRoundFactory.address)
+      await pollFactory.transferOwnership(missingGatekeepterQfi.address)
+      await grantRoundFactory.transferOwnership(missingGatekeepterQfi.address)
+      await missingGatekeepterQfi.initialize(VKRegistry.address, messageAqFactory.address, messageAqFactoryGrants.address)
+
+      const coordinator = ethers.Wallet.createRandom()
+      const coordinatorKey = new Keypair()
+      await missingGatekeepterQfi.deployGrantRound(
+        10,
+        {maxMessages: 5, maxVoteOptions: 5},
+        {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+        coordinatorKey.pubKey.asContractParam(),
+        coordinator.address,
+      )
     })
 
     it('require fail - reverts if recipient registry is not set', async () => {
@@ -184,6 +218,7 @@ describe.only('QFI', () => {
     })
 
     it('require fail - reverts if current round is not finalized', async () => {
+      //set current stage to waiting for finalization then try to deploy
       
     })
 
