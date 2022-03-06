@@ -2,41 +2,41 @@ import { ethers } from "hardhat";
 import { BigNumber, Signer } from "ethers";
 import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
+import getPoseidonLibraries from "./helpers/GetPoseidonLibraries"
 import { OptimisticRecipientRegistry__factory } from "../typechain/factories/OptimisticRecipientRegistry__factory";
 import { BaseERC20Token__factory } from "../typechain/factories/BaseERC20Token__factory";
 import { BaseERC20Token } from "../typechain/BaseERC20Token";
 import { QFI } from "../typechain/QFI";
 import { QFI__factory, QFILibraryAddresses } from "../typechain/factories/QFI__factory";
-import { PoseidonT3 } from "../typechain/PoseidonT3";
-import { PoseidonT3__factory } from "../typechain/factories/PoseidonT3__factory";
-import { PoseidonT4 } from "../typechain/PoseidonT4";
-import { PoseidonT4__factory } from "../typechain/factories/PoseidonT4__factory";
-import { PoseidonT5 } from "../typechain/PoseidonT5";
-import { PoseidonT5__factory } from "../typechain/factories/PoseidonT5__factory";
-import { PoseidonT6 } from "../typechain/PoseidonT6";
-import { PoseidonT6__factory } from "../typechain/factories/PoseidonT6__factory";
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
+import { PollFactory } from "../typechain/PollFactory";
 import { PollFactory__factory, PollFactoryLibraryAddresses } from "../typechain/factories/PollFactory__factory";
 import { FreeForAllGatekeeper__factory } from "../typechain/factories/FreeForAllGatekeeper__factory";
 import { ConstantInitialVoiceCreditProxy__factory } from "../typechain/factories/ConstantInitialVoiceCreditProxy__factory";
+import { PollProcessorAndTallyer } from "../typechain/PollProcessorAndTallyer";
+import { PollProcessorAndTallyer__factory } from "../typechain/factories/PollProcessorAndTallyer__factory";
+
+import {MockVerifier} from '../typechain/MockVerifier'
+import {MockVerifier__factory} from '../typechain/factories/MockVerifier__factory'
 import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 
 chai.use(solidity);
 const { expect } = chai;
 
 
-describe('QFI', () => {
+describe.only('QFI', () => {
   
   let deployer: Signer;
+  let addr1: Signer;
   let RecipientRegistryFactory: OptimisticRecipientRegistry__factory;
   let BaseERC20TokenFactory: BaseERC20Token__factory;
   let baseERC20Token: BaseERC20Token;
   let qfi: QFI;
   let MessageAqFactoryFactory: any
-  let pollFactory: any
+  let pollFactory: PollFactory
   let grantRoundFactory: any
   let optimisticRecipientRegistry: any
-  let PollFactoryFactory: any
+  let PollFactoryFactory: PollFactory__factory
   let FreeForAllGateKeeperFactory: any
   let freeForAllGateKeeper: any
   let ConstantInitialVoiceCreditProxyFactory: any
@@ -48,35 +48,19 @@ describe('QFI', () => {
   let messageAqFactoryGrants: any
   let GrantRoundFactory: any
 
-
   beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
-    const PoseidonT3Factory = new PoseidonT3__factory(deployer);
-    const PoseidonT4Factory = new PoseidonT4__factory(deployer);
-    const PoseidonT5Factory = new PoseidonT5__factory(deployer);
-    const PoseidonT6Factory = new PoseidonT6__factory(deployer);
-    const poseidonT3 = await PoseidonT3Factory.deploy();
-    const poseidonT4 = await PoseidonT4Factory.deploy();
-    const poseidonT5 = await PoseidonT5Factory.deploy();
-    const poseidonT6 = await PoseidonT6Factory.deploy();
-
-    const linkedLibraryAddresses = {
-      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
-      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
-      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
-      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
-    };
+    [deployer, addr1] = await ethers.getSigners();
+    const linkedLibraryAddresses = await getPoseidonLibraries(deployer)
 
     GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
       signer: deployer,
       libraries: { ...linkedLibraryAddresses }
-    }
-    )
+    })
+
      MessageAqFactoryFactory = await ethers.getContractFactory( "MessageAqFactory", {
       signer: deployer,
       libraries: { ...linkedLibraryAddresses }
-    }
-    )
+    })
 
 
     BaseERC20TokenFactory = new BaseERC20Token__factory(deployer);
@@ -182,7 +166,6 @@ describe('QFI', () => {
         ethers.constants.AddressZero,
         constantInitialVoiceCreditProxy.address
       )
-      console.log(missingGatekeepterQfi)
 
       messageAqFactory = await MessageAqFactoryFactory.deploy();
       messageAqFactoryGrants = await MessageAqFactoryFactory.deploy();
@@ -223,42 +206,90 @@ describe('QFI', () => {
     })
 
     it('require fail - verify - deploys new funding round after previous round has been finalized', async () => {
-     
+      const coordinator = ethers.Wallet.createRandom()
+      const coordinatorKey = new Keypair()
+      const MockVerifierFactory = new MockVerifier__factory(deployer);
+      const mockVerifier = await MockVerifierFactory.deploy();
+
+      const PollProcessorAndTallyerFactory = new PollProcessorAndTallyer__factory(deployer);
+      const pollProcessorAndTallyer = await PollProcessorAndTallyerFactory.deploy(mockVerifier.address);
+
+      const qfi2 = await QFIFactory.deploy(
+        baseERC20Token.address,
+        grantRoundFactory.address,
+        pollFactory.address,
+        freeForAllGateKeeper.address,
+        constantInitialVoiceCreditProxy.address
+      );
+
+      await qfi2.deployGrantRound(
+        10,
+        {maxMessages: 5, maxVoteOptions: 5},
+        {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+        coordinatorKey.pubKey.asContractParam(),
+        coordinator.address,
+      )
+
+      //TODO seems like contribution needed?
+      //await qfi2.contribute(qfi.publicKey, 100)
+
+      await qfi2.setPollProcessorAndTallyer(pollProcessorAndTallyer.address)
+      await qfi2.closeVotingAndWaitForDeadline()
+      await qfi2.finalizeCurrentRound(100, 100)
+      expect(
+      qfi2.deployGrantRound(
+        10,
+        {maxMessages: 5, maxVoteOptions: 5},
+        {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+        coordinatorKey.pubKey.asContractParam(),
+        coordinator.address,
+      )).to.be.revertedWith("MACI: Cannot deploy a new grant round while not in the WAITING_FOR_SIGNUPS_AND_TOPUPS stage")
     })
 
     it('require fail - only owner can deploy funding round', async () => {
+      const coordinator = ethers.Wallet.createRandom()
+      const coordinatorKey = new Keypair()
+        expect(
+          qfi.connect(addr1).deployGrantRound(
+            10,
+            {maxMessages: 5, maxVoteOptions: 5},
+            {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+            coordinatorKey.pubKey.asContractParam(),
+            coordinator.address,
+          )
+        ).to.be.revertedWith("Ownable: caller is not the owner");
     })
   })
 
   describe('transferring matching funds', () => {
 
-    it('returns the amount of available matching funding', async () => {
-     
-    })
+    //it('returns the amount of available matching funding', async () => {
+    // 
+    //})
 
-    it('allows owner to finalize round', async () => {
-      
-    })
+    //it('allows owner to finalize round', async () => {
+    //  
+    //})
 
-    it('does not allow funds to be sent without a tally', async () => {
-      
-    })
+    //it('does not allow funds to be sent without a tally', async () => {
+    //  
+    //})
 
-    it('pulls funds from funding source', async () => {
-      
-    })
+    //it('pulls funds from funding source', async () => {
+    //  
+    //})
 
-    it('pulls funds from funding source if allowance is greater than balance', async () => {
-      
-    })
+    //it('pulls funds from funding source if allowance is greater than balance', async () => {
+    //  
+    //})
 
-    it('allows only owner to finalize round', async () => {
-      
-    })
+    //it('allows only owner to finalize round', async () => {
+    //  
+    //})
 
-    it('reverts if round has not been deployed', async () => {
-      
-    })
+    //it('reverts if round has not been deployed', async () => {
+    //  
+    //})
   })
 
   // describe('cancelling round', () => {
