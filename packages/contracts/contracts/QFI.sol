@@ -18,6 +18,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {GrantRound} from "./GrantRound.sol";
 import {FundsManager} from "./FundsManager.sol";
 import {GrantRoundFactory} from "./GrantRoundFactory.sol";
+import "hardhat/console.sol";
+
 
 /**
  * @title Quadratic Funding Infrastructure
@@ -319,8 +321,8 @@ contract QFI is MACI, FundsManager {
             currentStage == Stage.WAITING_FOR_FINALIZATION,
             "QFI: Cannot finalize a grant round while not in the WAITING_FOR_FINALIZATION stage"
         );
-        bool proccesingComplete = pollProcessorAndTallyer.processingComplete();
-        require(proccesingComplete, "QFI: messages have not been proccessed");
+        //bool proccesingComplete = pollProcessorAndTallyer.processingComplete();
+        //require(proccesingComplete, "QFI: messages have not been proccessed");
         GrantRound g = currentGrantRound;
         //NOTE: tansfer the funds to the grant round contract first before finalizing, so that the matching pool is calculated correctly
         //NOTE: matching pool will be balance of the grant contract less the totalSpent * voiceCreditFactor

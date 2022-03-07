@@ -13,7 +13,7 @@ import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Funds manager', () => {
+describe.only('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
@@ -84,10 +84,13 @@ describe('Funds manager', () => {
 
   it('allows direct contributions to the matching pool', async () => {
     //NOTE I'm assuming matching pool means contract's balance
-    await token.transfer(await addr1.getAddress(), 50);
-    await token.connect(addr1).transfer(fundsManager.address, 50);
-    expect(await token.balanceOf(fundsManager.address)).to.equal(50)
-
+    const fundingSource = ethers.Wallet.createRandom()
+    await fundsManager.addFundingSource(fundingSource.address)
+    await token.transfer(fundingSource.address, 10);
+    console.log("ASDSAD")
+    console.log(await token.balanceOf(fundingSource.address))
+    console.log(await fundsManager.getMatchingFunds(token.address))
+    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(10)
   })
 
   //describe('withdrawing funds', () => {
@@ -170,7 +173,11 @@ describe('Funds manager', () => {
     })
     
     it('returns the amount of available matching funding', async () => {
-     console.log(await fundsManager.getMatchingFunds(token.address) )
+      // create wallets with some balance and add as funding sources
+    //  const fundingSource = ethers.Wallet.createRandom()
+    //  await fundsManager.addFundingSource(fundingSource.address)
+
+    // expect(await fundsManager.getMatchingFunds(token.address)).to.equal(0)
     })
 
     it('pulls funds from funding source', async () => {
