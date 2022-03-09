@@ -13,7 +13,7 @@ import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 chai.use(solidity);
 const { expect } = chai;
 
-describe.only('Funds manager', () => {
+describe('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
