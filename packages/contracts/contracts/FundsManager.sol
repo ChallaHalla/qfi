@@ -52,8 +52,6 @@ contract FundsManager is Ownable{
             uint256 allowance = token.allowance(fundingSource, address(this));
             uint256 balance = token.balanceOf(fundingSource);
 
-            console.log(allowance, balance);
-
             uint256 contribution = allowance < balance ? allowance : balance;
             matchingPoolSize += contribution;
         }
@@ -65,11 +63,13 @@ contract FundsManager is Ownable{
      * @param _totalSpent Total amount of spent voice credits.
      * @param _totalSpentSalt The salt.
      */
+    // NOTE this function was internal
+    //should it be external?
     function transferMatchingFunds(
         // uint256 _totalSpent,
         // uint256 _totalSpentSalt,
         GrantRound currentRound
-    ) internal {
+    ) external onlyOwner {
         require(
             address(currentRound) != address(0),
             'Factory: Funding round has not been deployed'

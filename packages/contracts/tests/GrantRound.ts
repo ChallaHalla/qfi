@@ -1,65 +1,99 @@
 import { ethers } from 'hardhat';
+import { Wallet, Signer } from "ethers";
 import chai from 'chai';
+import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
+import { GrantRound } from "../typechain/GrantRound";
 import { solidity } from 'ethereum-waffle';
+import { BaseERC20Token } from "../typechain/BaseERC20Token";
+import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 
 chai.use(solidity);
 const { expect } = chai;
 
 describe('Funding Round Factory', () => {
   
-  //let deployer: Signer;
-  //let coordinator: Signer;
-  //let grantRoundFactory: GrantRoundFactory;
+  let deployer: Signer;
+  let coordinator: Wallet;
+  let grantRound: GrantRound;
+  let token: BaseERC20Token;
+  let VKRegistry: any;
 
 
   beforeEach(async () => {
-    //[deployer, coordinator] = await ethers.getSigners();
-    //const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
-    //const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer)
-    //const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
-    //const PoseidonT6Factory = await ethers.getContractFactory("PoseidonT6", deployer)
+    [deployer] = await ethers.getSigners();
+    const PoseidonT3Factory =await  ethers.getContractFactory("PoseidonT3", deployer)
+    const PoseidonT4Factory = await ethers.getContractFactory("PoseidonT4", deployer)
+    const PoseidonT5Factory = await ethers.getContractFactory("PoseidonT5", deployer)
+    const PoseidonT6Factory = await ethers.getContractFactory("PoseidonT6", deployer)
 
-    //const poseidonT3 = await PoseidonT3Factory.deploy();
-    //const poseidonT4 = await PoseidonT4Factory.deploy();
-    //const poseidonT5 = await PoseidonT5Factory.deploy();
-    //const poseidonT6 = await PoseidonT6Factory.deploy();
-    //let baseERC20Token = await ethers.getContractFactory("BaseERC20Token", deployer)
-    //baseERC20Token.deploy(100);
+    const poseidonT3 = await PoseidonT3Factory.deploy();
+    const poseidonT4 = await PoseidonT4Factory.deploy();
+    const poseidonT5 = await PoseidonT5Factory.deploy();
+    const poseidonT6 = await PoseidonT6Factory.deploy();
+    let baseERC20Token = await ethers.getContractFactory("BaseERC20Token", deployer)
+    token = await baseERC20Token.deploy(100);
 
 
-    //const linkedLibraryAddresses = {
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
-    //  ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
-    //}
+    const linkedLibraryAddresses = {
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT5"]: poseidonT5.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT3"]: poseidonT3.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT6"]: poseidonT6.address,
+      ["maci-contracts/contracts/crypto/Hasher.sol:PoseidonT4"]: poseidonT4.address,
+    }
+
     //const GrantRoundFactory = await ethers.getContractFactory( "GrantRoundFactory", {
     //  signer: deployer,
     //  libraries: { ...linkedLibraryAddresses }
     //})
-    //grantRoundFactory = await GrantRoundFactory.deploy();
-    //const grantRound = grantRoundFactory.deployGrantRound(
-    //        1,
-    //        await coordinator.getAddress(),
-    //        baseERC20Token,
-    //        100,
-    //        _maxValues,
-    //        _treeDepths,
-    //        batchSizes,
-    //        _coordinatorPubKey,
-    //        vkRegistry,
-    //        this,
-    //        owner()
-    //    );
+
+      const ConstantInitialVoiceCreditProxyFactory = await ethers.getContractFactory("ConstantInitialVoiceCreditProxy", deployer);
+      const constantInitialVoiceCreditProxy = await ConstantInitialVoiceCreditProxyFactory.deploy(0);
+
+      const PollFactoryFactory = await ethers.getContractFactory("PollFactory", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+      const pollFactory = await PollFactoryFactory.deploy();
+
+      const FreeForAllGateKeeperFactory = await ethers.getContractFactory("FreeForAllGatekeeper", deployer);
+      const freeForAllGateKeeper = await FreeForAllGateKeeperFactory.deploy();
+    const MACIFactory = await ethers.getContractFactory("MACI", {signer: deployer, libraries: {...linkedLibraryAddresses}})
+    const VKRegistryFactory = await ethers.getContractFactory("VkRegistry", deployer)
+    VKRegistry = await VKRegistryFactory.deploy()
+    const maci = await MACIFactory.deploy(
+        pollFactory.address,
+        freeForAllGateKeeper.address,
+        constantInitialVoiceCreditProxy.address
+      );
+
+    //const coordinator = ethers.Wallet.createRandom()
+    //const coordinatorKey = new Keypair()
+    ////grantRoundFactory = await GrantRoundFactory.deploy();
+
+    //const grantRoundFactory = await ethers.getContractFactory("GrantRound", deployer)
+    //grantRound = await grantRoundFactory.deploy(
+    //  1,
+    //  coordinator.address,
+    //  token.address,
+    //  100,
+    //  {maxMessages: 5, maxVoteOptions: 5},
+    //  {intStateTreeDepth: 1, messageTreeSubDepth:1, messageTreeDepth: 1, voteOptionTreeDepth:1 },
+    //  {messageBatchSize: 1, tallyBatchSize: 1},
+    //  coordinatorKey.pubKey.asContractParam(),
+    //  {maci: maci.address, vkRegistry: VKRegistry.address, messageAq: ""},
+    //  VKRegistry.address
+    //);
     }
   )
 
   it('initializes', async () => {
-    
+    const deployTransaction = await grantRound.deployTransaction.wait()
+    expect(deployTransaction.status).to.not.equal(0);
+    expect(deployTransaction.contractAddress).to.equal(grantRound.address);
   })
 
   it('configured', async () => {
-  
+    expect(await grantRound.voiceCreditFactor()).to.equal(1)
+    expect(await grantRound.coordinator()).to.equal(coordinator.address)
+    expect(await grantRound.nativeToken()).to.equal(token.address)
+    expect(await grantRound.recipientRegistry()).to.equal(VKRegistry.address)
   })
 
   describe('Grant Round', () => {

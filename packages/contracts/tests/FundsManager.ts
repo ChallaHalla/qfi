@@ -1,9 +1,10 @@
-import { ethers, waffle} from 'hardhat';
+import { ethers, waffle} from 'hardhat'
 import { BaseERC20Token } from "../typechain/BaseERC20Token";
 import { Signer } from "ethers";
 import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { FundsManager } from "../typechain/FundsManager";
+import { GrantRound } from "../typechain/GrantRound";
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
 import deployGrantRound from "./helpers/DeployGrantRound";
 import getPoseidonLibraries from "./helpers/GetPoseidonLibraries"
@@ -13,13 +14,14 @@ import { PubKey, PrivKey, Keypair } from "maci-domainobjs";
 chai.use(solidity);
 const { expect } = chai;
 
-describe('Funds manager', () => {
+describe.only('Funds manager', () => {
   
   let deployer: Signer;
   let addr1: Signer;
   let addr2: Signer;
   let fundsManager: FundsManager;
   let token: BaseERC20Token;
+  let grantRound : GrantRound
 
   beforeEach(async () => {
     [deployer, addr1, addr2] = await ethers.getSigners();
@@ -84,27 +86,16 @@ describe('Funds manager', () => {
 
   it('allows direct contributions to the matching pool', async () => {
     //NOTE I'm assuming matching pool means contract's balance
-    const fundingSource = await ethers.Wallet.createRandom()
-    await fundsManager.addFundingSource(fundingSource.address)
-    await token.transfer(fundingSource.address, 10);
-    await token.transfer(fundsManager.address, 10);
+    const fundingSourceAddress = await addr2.getAddress()
 
-    const fundingSourceSigner = await ethers.getSigner(fundingSource.address)
-    await token.connect(fundingSourceSigner).approve(fundsManager.address, 10)
-    //console.log(await token.allowance(fundingSource.address, fundsManager.address))
-    //
-//    await token.approve(fundsManager.address, 100)
-//
-//    console.log(await token.allowance(await deployer.getAddress(), fundsManager.address))
-//
-//    console.log(await token.allowance(fundsManager.address, fundingSource.address))
-//    console.log(await token.allowance(fundingSource.address, fundsManager.address))
-//    //console.log(fundsManager.address)
-//    //console.log(s)
-//    //console.log(deployer)
-//
-//    console.log("ASDSAD")
-//    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(10)
+    await fundsManager.addFundingSource(fundingSourceAddress)
+    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(0)
+
+    await token.transfer(fundsManager.address, 10);
+    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(10)
+    await token.transfer(fundingSourceAddress, 10);
+    await token.connect(addr2).approve(fundsManager.address, 10)
+    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(20)
   })
 
   //describe('withdrawing funds', () => {
@@ -132,11 +123,15 @@ describe('Funds manager', () => {
   describe('transferring matching funds', () => {
     beforeEach(async () => {
       const coordinator = ethers.Wallet.createRandom()
-      const grantRoundFactory = await deployGrantRound(deployer)
+      //const grantRoundFactory = await deployGrantRound(deployer)
       const BaseERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
-      token = await BaseERC20TokenFactory.deploy(50); 
-
       const linkedLibraryAddresses = await getPoseidonLibraries(deployer);
+
+      const grantRoundFactory = await ethers.getContractFactory("GrantRound", {
+        signer: deployer,
+        libraries: { ...linkedLibraryAddresses }
+      });
+
 
       const RecipientRegistryFactory = await ethers.getContractFactory("OptimisticRecipientRegistry", deployer);
       const PollFactoryFactory = await ethers.getContractFactory("PollFactory", {signer: deployer, libraries: {...linkedLibraryAddresses}})
@@ -166,12 +161,10 @@ describe('Funds manager', () => {
       }
       )
 
-      const messageAqFactory = await MessageAqFactoryFactory.deploy();
-      messageAqFactory.transferOwnership(grantRoundFactory.address)
-      grantRoundFactory.setMessageAqFactory(messageAqFactory.address)
+      const messageAq = await MessageAqFactoryFactory.deploy();
 
       const coordinatorKey = new Keypair()
-      const grantRound = grantRoundFactory.deployGrantRound(
+      grantRound = await grantRoundFactory.deploy(
         1,
         coordinator.address,
         token.address,
@@ -180,27 +173,72 @@ describe('Funds manager', () => {
         {intStateTreeDepth: 1, messageTreeSubDepth: 1, messageTreeDepth: 1, voteOptionTreeDepth: 1},
         {messageBatchSize: 1, tallyBatchSize: 1},
         coordinatorKey.pubKey.asContractParam(),
+        {vkRegistry: VKRegistry.address, maci: maci.address, messageAq: messageAq.address},
         VKRegistry.address,
-        maci.address,
-        grantRoundFactory.address
       );
     })
     
+
+    
     it('returns the amount of available matching funding', async () => {
-    //create wallets with some balance and add as funding sources
-      //const fundingSource = ethers.Wallet.createRandom()
-      //await fundsManager.addFundingSource(fundingSource.address)
-      //expect(await fundsManager.getMatchingFunds(token.address)).to.equal(0)
+      const fundingSource1Address = await addr1.getAddress()
+      const fundingSource2Address = await addr2.getAddress()
+      await token.transfer(fundingSource1Address, 10);
+      await token.transfer(fundingSource2Address, 25);
+
+      await fundsManager.addFundingSource(fundingSource1Address)
+      await fundsManager.addFundingSource(fundingSource2Address)
+      await token.connect(addr1).approve(fundsManager.address, 10)
+      await token.connect(addr2).approve(fundsManager.address, 25)
+      expect(await fundsManager.getMatchingFunds(token.address)).to.equal(35)
+
+      await token.transfer(fundsManager.address, 10);
+      expect(await fundsManager.getMatchingFunds(token.address)).to.equal(45)
     })
 
     it('pulls funds from funding source', async () => {
-      
+      const fundingSource1Address = await addr1.getAddress()
+      const fundingSource2Address = await addr2.getAddress()
+      await token.transfer(fundingSource1Address, 10);
+      await token.transfer(fundingSource2Address, 25);
+      await fundsManager.addFundingSource(fundingSource1Address)
+      await fundsManager.addFundingSource(fundingSource2Address)
+      await token.connect(addr1).approve(fundsManager.address, 10)
+      await token.connect(addr2).approve(fundsManager.address, 25)
+      await token.transfer(fundsManager.address, 10);
+
+      fundsManager.transferMatchingFunds(grantRound.address)
+      expect(await token.balanceOf(grantRound.address)).to.equal(45)
     })
 
     it('pulls funds from funding source if allowance is greater than balance', async () => {
-      
+      const fundingSource1Address = await addr1.getAddress()
+      const fundingSource2Address = await addr2.getAddress()
+      await token.transfer(fundingSource1Address, 10);
+      await token.transfer(fundingSource2Address, 25);
+      await fundsManager.addFundingSource(fundingSource1Address)
+      await fundsManager.addFundingSource(fundingSource2Address)
+      await token.connect(addr1).approve(fundsManager.address, 100)
+      await token.connect(addr2).approve(fundsManager.address, 100)
+      fundsManager.transferMatchingFunds(grantRound.address)
+      expect(await token.balanceOf(grantRound.address)).to.equal(35)
+
     })
 
+    it('pulls only up to allowance from funding source if allowance is less than balance', async () => {
+      const fundingSource1Address = await addr1.getAddress()
+      const fundingSource2Address = await addr2.getAddress()
+      await token.transfer(fundingSource1Address, 10);
+      await token.transfer(fundingSource2Address, 25);
+      await fundsManager.addFundingSource(fundingSource1Address)
+      await fundsManager.addFundingSource(fundingSource2Address)
+      await token.connect(addr1).approve(fundsManager.address, 10)
+      await token.connect(addr2).approve(fundsManager.address, 10)
+      await token.transfer(fundsManager.address, 10);
+
+      fundsManager.transferMatchingFunds(grantRound.address)
+      expect(await token.balanceOf(grantRound.address)).to.equal(30)
+    })
     
   })
 
