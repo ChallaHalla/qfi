@@ -28,7 +28,8 @@ describe('Funds manager', () => {
     fundsManager = await FundsManagerFactory.deploy();
 
     const BaseERC20TokenFactory = await ethers.getContractFactory("BaseERC20Token", deployer)
-    token = await BaseERC20TokenFactory.deploy(50);
+    token = await BaseERC20TokenFactory.deploy(100);
+    await expect((await token.deployTransaction.wait()).status).to.not.equal(0);
   })
 
   it('verify - initializes properly', async () => {
@@ -38,8 +39,7 @@ describe('Funds manager', () => {
   })
 
   it('verify - configured properly', async () => {
-    const provider = waffle.provider;
-    expect(await provider.getCode(fundsManager.address)).to.not.equal("0x")
+    expect(await ethers.provider.getCode(fundsManager.address)).to.not.equal("0x")
     const contract = await ethers.getContractAt("FundsManager", fundsManager.address)
   })
 
@@ -84,13 +84,27 @@ describe('Funds manager', () => {
 
   it('allows direct contributions to the matching pool', async () => {
     //NOTE I'm assuming matching pool means contract's balance
-    const fundingSource = ethers.Wallet.createRandom()
+    const fundingSource = await ethers.Wallet.createRandom()
     await fundsManager.addFundingSource(fundingSource.address)
     await token.transfer(fundingSource.address, 10);
-    console.log("ASDSAD")
-    console.log(await token.balanceOf(fundingSource.address))
-    console.log(await fundsManager.getMatchingFunds(token.address))
-    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(10)
+    await token.transfer(fundsManager.address, 10);
+
+    const fundingSourceSigner = await ethers.getSigner(fundingSource.address)
+    await token.connect(fundingSourceSigner).approve(fundsManager.address, 10)
+    //console.log(await token.allowance(fundingSource.address, fundsManager.address))
+    //
+//    await token.approve(fundsManager.address, 100)
+//
+//    console.log(await token.allowance(await deployer.getAddress(), fundsManager.address))
+//
+//    console.log(await token.allowance(fundsManager.address, fundingSource.address))
+//    console.log(await token.allowance(fundingSource.address, fundsManager.address))
+//    //console.log(fundsManager.address)
+//    //console.log(s)
+//    //console.log(deployer)
+//
+//    console.log("ASDSAD")
+//    expect(await fundsManager.getMatchingFunds(token.address)).to.equal(10)
   })
 
   //describe('withdrawing funds', () => {
@@ -173,11 +187,10 @@ describe('Funds manager', () => {
     })
     
     it('returns the amount of available matching funding', async () => {
-      // create wallets with some balance and add as funding sources
-    //  const fundingSource = ethers.Wallet.createRandom()
-    //  await fundsManager.addFundingSource(fundingSource.address)
-
-    // expect(await fundsManager.getMatchingFunds(token.address)).to.equal(0)
+    //create wallets with some balance and add as funding sources
+      //const fundingSource = ethers.Wallet.createRandom()
+      //await fundsManager.addFundingSource(fundingSource.address)
+      //expect(await fundsManager.getMatchingFunds(token.address)).to.equal(0)
     })
 
     it('pulls funds from funding source', async () => {

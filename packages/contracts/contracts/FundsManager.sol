@@ -51,6 +51,9 @@ contract FundsManager is Ownable{
             address fundingSource = fundingSources.at(index);
             uint256 allowance = token.allowance(fundingSource, address(this));
             uint256 balance = token.balanceOf(fundingSource);
+
+            console.log(allowance, balance);
+
             uint256 contribution = allowance < balance ? allowance : balance;
             matchingPoolSize += contribution;
         }

@@ -25,7 +25,7 @@ chai.use(solidity);
 const { expect } = chai;
 
 
-describe.only('QFI', () => {
+describe('QFI', () => {
   
   let deployer: Signer;
   let addr1: Signer;
@@ -334,30 +334,9 @@ describe.only('QFI', () => {
 
   describe('transferring matching funds', () => {
     //TODO this seems like it's meant for funds manager?
-
-    //it('returns the amount of available matching funding', async () => {
-    // 
-    //})
-
-    //it('does not allow funds to be sent without a tally', async () => {
-    //  
-    //})
-
-    //it('pulls funds from funding source', async () => {
-    //  
-    //})
-
-    //it('pulls funds from funding source if allowance is greater than balance', async () => {
-    //  
-    //})
-
     it('allows only owner to finalize round', async () => {
       expect(qfi.connect(addr1).finalizeCurrentRound(100, 100)).to.be.revertedWith("Ownable: caller is not the owner");
     })
-
-    //it('reverts if round has not been deployed', async () => {
-    //  
-    //})
   })
 
   // describe('cancelling round', () => {
