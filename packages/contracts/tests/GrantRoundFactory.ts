@@ -3,7 +3,7 @@ import { Signer } from "ethers";
 import chai from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { GrantRoundFactory } from "../typechain/GrantRoundFactory";
-import deployGrantRound from "./helpers/DeployGrantRound";
+import deployGrantRoundFactory from "./helpers/DeployGrantRoundFactory";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -15,7 +15,7 @@ describe('Grant Round Factory', () => {
 
   beforeEach(async () => {
     [deployer, addr1] = await ethers.getSigners();
-    grantRoundFactory = await deployGrantRound(deployer)
+    grantRoundFactory = await deployGrantRoundFactory(deployer)
   })
 
   it('verify - initializes properly', async () => {

@@ -63,7 +63,7 @@ contract FundsManager is Ownable{
      * @param _totalSpent Total amount of spent voice credits.
      * @param _totalSpentSalt The salt.
      */
-    // NOTE this function was internal
+    //TODO NOTE this function was internal
     //should it be external?
     function transferMatchingFunds(
         // uint256 _totalSpent,
